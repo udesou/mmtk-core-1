@@ -49,7 +49,10 @@ pub fn start_control_collector<VM: VMBinding>(mmtk: &MMTK<VM>, tls: OpaquePointe
 /// * `mmtk`: A reference to an MMTk instance to initialize.
 /// * `heap_size`: The heap size for the MMTk instance in bytes.
 pub fn gc_init<VM: VMBinding>(mmtk: &'static mut MMTK<VM>, heap_size: usize) {
-    crate::util::logger::init().unwrap();
+    match crate::util::logger::init() {
+        Ok(r) => (),
+        Err(e) => warn!("Logger has already been initialized!")
+    }
     mmtk.plan.gc_init(heap_size, &mmtk.vm_map, &mmtk.scheduler);
 }
 
