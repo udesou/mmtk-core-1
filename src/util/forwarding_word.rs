@@ -45,8 +45,7 @@ pub fn spin_and_get_forwarded_object<VM: VMBinding>(
     }
     if gc_byte & FORWARDING_MASK == FORWARDED {
         let status_word = VM::VMObjectModel::read_available_bits_word(object);
-        let a = status_word & !((FORWARDING_MASK as usize) << gc_byte::get_relative_offset::<VM>());
-        unsafe { Address::from_usize(a).to_object_reference() }
+        unsafe { Address::from_usize(status_word).to_object_reference() }
     } else {
         panic!(
             "Invalid header value 0x{:x} 0x{:x}",
@@ -62,17 +61,14 @@ pub fn forward_object<VM: VMBinding, CC: CopyContext>(
     copy_context: &mut CC,
 ) -> ObjectReference {
     let new_object = VM::VMObjectModel::copy(object, semantics, copy_context);
-    let forwarded = (FORWARDED as usize) << gc_byte::get_relative_offset::<VM>();
+
+    VM::VMObjectModel::write_available_byte(object, FORWARDED);
     VM::VMObjectModel::write_available_bits_word(
         object,
-        new_object.to_address().as_usize() | forwarded,
+        new_object.to_address().as_usize()
     );
-    new_object
-}
 
-pub fn set_forwarding_pointer<VM: VMBinding>(object: ObjectReference, ptr: ObjectReference) {
-    let forwarded = (FORWARDED as usize) << gc_byte::get_relative_offset::<VM>();
-    VM::VMObjectModel::write_available_bits_word(object, ptr.to_address().as_usize() | forwarded);
+    new_object
 }
 
 pub fn is_forwarded<VM: VMBinding>(object: ObjectReference) -> bool {
@@ -98,7 +94,3 @@ pub fn clear_forwarding_bits<VM: VMBinding>(object: ObjectReference) {
         Ordering::SeqCst,
     );
 }
-
-// pub fn extract_forwarding_pointer(forwarding_word: usize) -> ObjectReference {
-//     unsafe { Address::from_usize(forwarding_word & (!(FORWARDING_MASK as usize))).to_object_reference() }
-// }
