@@ -41,7 +41,9 @@ pub fn spin_and_get_forwarded_object<VM: VMBinding>(
         gc_byte = gc_byte::read_gc_byte::<VM>(object);
     }
     if gc_byte & FORWARDING_MASK == FORWARDED {
-        let status_word = VM::VMObjectModel::read_available_bits_word(object);
+        let status_word = unsafe {
+            (object.to_address()).atomic_load::<AtomicUsize>(Ordering::SeqCst)
+        };
         unsafe { Address::from_usize(status_word).to_object_reference() }
     } else {
         panic!(
@@ -59,11 +61,11 @@ pub fn forward_object<VM: VMBinding, CC: CopyContext>(
 ) -> ObjectReference {
     let new_object = VM::VMObjectModel::copy(object, semantics, copy_context);
 
-    VM::VMObjectModel::write_available_byte(object, FORWARDED);
-    VM::VMObjectModel::write_available_bits_word(
-        object,
-        new_object.to_address().as_usize()
-    );
+    gc_byte::write_gc_byte::<VM>(object, FORWARDED);
+    unsafe {
+        (object.to_address())
+            .atomic_store::<AtomicUsize>(new_object.to_address().as_usize(), Ordering::SeqCst)
+    }
 
     new_object
 }
