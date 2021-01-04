@@ -127,7 +127,7 @@ pub trait Allocator<VM: VMBinding>: Downcast {
             // Try to allocate using the slow path
             let result = self.alloc_slow_once(size, align, offset);
 
-            if unsafe { !VM::VMActivePlan::is_mutator(tls) } {
+            if !unsafe { VM::VMActivePlan::is_mutator(tls) } {
                 debug_assert!(!result.is_zero());
                 return result;
             }
@@ -150,7 +150,14 @@ pub trait Allocator<VM: VMBinding>: Downcast {
                 return result;
             }
 
-            if emergency_collection {
+            // It is possible to have cases where a thread is blocked for another GC (non emergency)
+            // immediately after being blocked for a GC (emergency) (e.g. in stress test), that is saying the thread does not
+            // leave this loop between the two GCs. The local var 'emergency_collection' was set to true
+            // after the first GC. But when we execute this check below, we just finished the second GC,
+            // which is not emergency. In such case, we will give a false OOM.
+            // We cannot just rely on the local var. Instead, we get the emergency colleciton value again,
+            // and check both.
+            if emergency_collection && self.get_plan().is_emergency_collection() {
                 trace!("Emergency collection");
                 // Report allocation success to assist OutOfMemory handling.
                 let guard = plan.oom_lock.lock().unwrap();

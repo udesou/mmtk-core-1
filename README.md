@@ -25,18 +25,19 @@ As the Rust language and its libraries (crates) are frequently evolving, we reco
 
 ```console
 $ # replace nightly-YYYY-MM-DD with the toolchain version specified in mmtk-dev-env
-$ Export RUSTUP_TOOLCHAIN=nightly-YYYY-MM-DD
+$ export RUSTUP_TOOLCHAIN=nightly-YYYY-MM-DD
 
 $ cargo build --features <space separated features>
 ```
 
 You must specify a GC plan as a feature at build time.
-Currently, there are two different plans to choose from:
+You may choose from:
 
-* `--features nogc` for NoGC, and
-* `--features semispace` for SemiSpace.
+* `--features nogc` for NoGC (allocation only),
+* `--features semispace` for a semi space GC, or
+* `--features gencopy` for a generational copying GC.
 
-A full list of available features can be seen by examining [`Cargo.toml`](Cargo.toml).
+A full list of plans and other available features can be seen by examining [`Cargo.toml`](Cargo.toml).
 By passing the `--features` flag to the Rust compiler,
 we conditionally compile plan-specific code.
 You can optionally enable sanity checks by adding `sanity` to the set of features
