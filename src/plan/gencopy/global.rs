@@ -54,7 +54,7 @@ impl<VM: VMBinding> Plan for GenCopy<VM> {
     where
         Self: Sized,
     {
-        let nursery_full = self.nursery.reserved_pages() >= (self.get_total_pages() / 2);
+        let nursery_full = self.nursery.reserved_pages() >= (NURSERY_SIZE >> LOG_BYTES_IN_PAGE);
         let heap_full = self.get_pages_reserved() > self.get_total_pages();
         space_full || nursery_full || heap_full
     }
